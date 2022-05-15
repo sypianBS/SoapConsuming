@@ -81,9 +81,10 @@ extension ViewController: XMLParserDelegate {
     }
     
     func parserDidEndDocument(_ parser: XMLParser) {
-        let student = Student(details: xmlDict)
-        print(student.id)
-        print(student.name)
+        if let student = Student(details: xmlDict) {
+            print(student.id)
+            print(student.name)
+        }
     }
 }
 
@@ -91,11 +92,11 @@ struct Student {
     let id: Int
     let name: String
     
-    init(details: [String: Any]) {
+    init?(details: [String: Any]) {
         if let stringId = details["id"] as? String, let intId = Int(stringId) {
             id = intId
         } else {
-            id = -1
+           return nil
         }
         name = details["name"] as? String ?? ""
     }
