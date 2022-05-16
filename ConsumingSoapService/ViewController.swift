@@ -13,7 +13,7 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        xMLParsingManager.consumeSoap()
+        xMLParsingManager.consumeSoap(studentId: 2)
     }
     
 }

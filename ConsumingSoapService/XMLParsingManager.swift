@@ -18,8 +18,8 @@ final class XMLParsingManager: NSObject {
     private override init() {}
     
         
-    func consumeSoap() {
-        let urlRequest = XMLRequestUtils.getSoapRequest()
+    func consumeSoap(studentId: Int) {
+        let urlRequest = XMLRequestUtils.getSoapRequest(studentId: studentId)
         
         let session = URLSession.shared
         let task = session.dataTask(with: urlRequest, completionHandler: {data, response, error -> Void in
@@ -43,13 +43,19 @@ final class XMLParsingManager: NSObject {
     }
     
     struct XMLRequestUtils {
+        private static let idPlaceholder = "ID_PLACEHOLDER"
+        
         private static let xmlMessage: String = """
         <?xml version="1.0" encoding="utf-8"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
         xmlns:std="http://www.bensypianskinamespace.com">
           <soap:Body>
             <std:getStudent>
-              <id>1</id>
+              <id>
+        """
+        + idPlaceholder +
+        """
+        </id>
             </std:getStudent>
           </soap:Body>
         </soap:Envelope>
@@ -57,10 +63,10 @@ final class XMLParsingManager: NSObject {
         
         private static let soapServiceUrl = "http://localhost:8080/ws"
         
-        static func getSoapRequest() -> URLRequest {
+        static func getSoapRequest(studentId: Int) -> URLRequest {
             var urlRequest = URLRequest(url: URL(string: soapServiceUrl)!)
             urlRequest.httpMethod = "POST"
-            urlRequest.httpBody = xmlMessage.data(using: .utf8)
+            urlRequest.httpBody = xmlMessage.replacingOccurrences(of: idPlaceholder, with: "\(studentId)").data(using: .utf8)
             urlRequest.addValue("text/xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
             return urlRequest
         }
