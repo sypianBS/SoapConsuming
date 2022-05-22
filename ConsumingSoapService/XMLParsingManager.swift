@@ -12,14 +12,14 @@ final class XMLParsingManager: NSObject {
     var xmlDict = [String: Any]()
     var xmlDictArr = [[String: Any]]()
     var currentElement = ""
+    var numberOfStudents: String?
     
     static let shared = XMLParsingManager()
     
     private override init() {}
     
         
-    func consumeSoap(studentId: Int) {
-        let urlRequest = XMLRequestUtils.getSoapRequest(studentId: studentId)
+    func consumeSoap(urlRequest: URLRequest) {
         
         let session = URLSession.shared
         let task = session.dataTask(with: urlRequest, completionHandler: {data, response, error -> Void in
@@ -45,29 +45,51 @@ final class XMLParsingManager: NSObject {
     struct XMLRequestUtils {
         private static let idPlaceholder = "ID_PLACEHOLDER"
         
-        private static let xmlMessage: String = """
+        private static let xmlMessageGetStudent: String = """
         <?xml version="1.0" encoding="utf-8"?>
         <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
         xmlns:std="http://www.bensypianskinamespace.com">
           <soap:Body>
-            <std:getStudent>
+            <std:getStudentRequest>
               <id>
         """
         + idPlaceholder +
         """
         </id>
-            </std:getStudent>
+            </std:getStudentRequest>
+          </soap:Body>
+        </soap:Envelope>
+        """
+        
+        private static let xmlMessageGetNumberOfStudents: String = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:std="http://www.bensypianskinamespace.com">
+          <soap:Body>
+            <std:getNumberOfStudentsRequest>
+            </std:getNumberOfStudentsRequest>
           </soap:Body>
         </soap:Envelope>
         """
         
         private static let soapServiceUrl = "http://localhost:8080/ws"
         
-        static func getSoapRequest(studentId: Int) -> URLRequest {
+        private static var basicUrlRequest: URLRequest {
             var urlRequest = URLRequest(url: URL(string: soapServiceUrl)!)
             urlRequest.httpMethod = "POST"
-            urlRequest.httpBody = xmlMessage.replacingOccurrences(of: idPlaceholder, with: "\(studentId)").data(using: .utf8)
             urlRequest.addValue("text/xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
+            return urlRequest
+        }
+        
+        static func getStudentSoapRequest(studentId: Int) -> URLRequest {
+            var urlRequest = basicUrlRequest
+            urlRequest.httpBody = xmlMessageGetStudent.replacingOccurrences(of: idPlaceholder, with: "\(studentId)").data(using: .utf8)
+            return urlRequest
+        }
+        
+        static func getNumberOfStudentsSoapRequest() -> URLRequest {
+            var urlRequest = basicUrlRequest
+            urlRequest.httpBody = xmlMessageGetNumberOfStudents.data(using: .utf8)
             return urlRequest
         }
     }
@@ -77,15 +99,17 @@ final class XMLParsingManager: NSObject {
 extension XMLParsingManager: XMLParserDelegate {
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
         if elementName == "student" {
-               xmlDict = [:]
-           } else {
-               currentElement = elementName
-           }
+            xmlDict = [:]
+        } else {
+            currentElement = elementName
+        }
     }
     
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         if !string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            if xmlDict[currentElement] == nil {
+            if currentElement == "numberOfStudents" {
+                numberOfStudents = string
+            } else if xmlDict[currentElement] == nil {
                 xmlDict.updateValue(string, forKey: currentElement)
             }
         }
@@ -99,8 +123,12 @@ extension XMLParsingManager: XMLParserDelegate {
     
     func parserDidEndDocument(_ parser: XMLParser) {
         if let student = Student(details: xmlDict) {
-            print(student.id)
-            print(student.name)
+            print("student id: " + student.id.description)
+            print("student name: " + student.name)
+            xmlDict = [:] //prevent second print for another request
+        }
+        if let numberOfStudents = numberOfStudents {
+            print("numberOfStudents: " + numberOfStudents)
         }
     }
 }
